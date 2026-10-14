@@ -1,0 +1,106 @@
+name: Windows and Linux verification
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build, test, and verify release
+        shell: powershell
+        run: |
+          python -m pip install PyYAML==6.0.3
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\tools\verify.ps1 -PythonExecutable python
+
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build player package
+        run: python tools/build_release.py
+      - name: Test portable and Linux behavior
+        run: |
+          python -m pip install PyYAML==6.0.3
+          python -m unittest discover -s tests -v
+      - name: Verify package integrity
+        run: python tools/verify_release.py
+
+  connected:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        ap:
+          - version: "0.6.7"
+            ref: debe4cf035c7c15efe6fb95f72343af0d420c68c
+          - version: "0.6.8"
+            ref: 54803be064fc7e80c4628777ed0b46a9390f255f
+    env:
+      WF_AP_SOURCE: ${{ github.workspace }}/ap-source
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ArchipelagoMW/Archipelago
+          ref: ${{ matrix.ap.ref }}
+          path: ap-source
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned core dependencies
+        run: python -m pip install -r tools/requirements-connected.txt
+      - name: Build player package
+        run: python tools/build_release.py
+      - name: Require real AP source
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          if not (Path(os.environ["WF_AP_SOURCE"]) / "MultiServer.py").is_file():
+              raise RuntimeError("Connected tests require AP source; refusing skipped acceptance")
+      - name: Connected coverage and premature-victory fault
+        run: python -m unittest tests.test_connected_multiworld tests.test_connected_ci tests.test_release_polish_docs -v
+      - name: Connected seed 160929
+        run: python tools/verify_connected_multiworld.py --ap-source ap-source --seed 160929 --output connected-results/160929
+      - name: Connected seed 160930
+        run: python tools/verify_connected_multiworld.py --ap-source ap-source --seed 160930 --output connected-results/160930
+      - name: APTests generation regressions and accessibility
+        run: python tools/verify_aptests_regressions.py --ap-source ap-source --output aptests-results --extra-seeds 12
+      - name: Keep synthetic connection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connected-${{ matrix.os }}-${{ matrix.ap.version }}
+          retention-days: 7
+          path: |
+            connected-results/*/report.json
+            connected-results/*/worker.log
+            aptests-results/report.json
+            aptests-results/input.json
+            aptests-results/*/worker.log

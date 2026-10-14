@@ -1,0 +1,111 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, replace
+
+from .campaign import CampaignManifest, CampaignRecord, campaign_digest, campaign_for_level_set
+from .layout import CampaignLayout, MACHINE_MODELS, PAGE_SIZE, layout_entries
+from .quantities import PROGRESSIVE_ITEMS
+
+GAME = "Word Factori"
+BASE_ID = 975_300_000
+
+
+@dataclass(frozen=True)
+class LocationData:
+    stable_key: str
+    canonical_index: int
+    slot_index: int
+    page_index: int
+    name: str
+    target: str
+    region: str
+    kind: str = "word"
+    world_tier: int = 0
+    required_route: frozenset[str] = frozenset()
+    requirement_options: tuple[frozenset[str], ...] = ()
+    module_limits: tuple[tuple[str, int], ...] = ()
+
+    @property
+    def code(self) -> int:
+        return BASE_ID + 1000 + self.canonical_index
+
+
+DEFAULT_LEVEL_SET = "discovery_labs"
+_CAMPAIGN = campaign_for_level_set(DEFAULT_LEVEL_SET)
+CAMPAIGN_ID = _CAMPAIGN.campaign_id
+CAMPAIGN_VERSION = _CAMPAIGN.version
+CAMPAIGN_DIGEST = campaign_digest(_CAMPAIGN)
+def _location_for_record(
+    record: CampaignRecord, slot_index: int, page_index: int,
+) -> LocationData:
+    return LocationData(
+        stable_key=record.stable_key,
+        canonical_index=record.index,
+        slot_index=slot_index,
+        page_index=page_index,
+        name=record.name,
+        target=record.target,
+        region=record.region,
+        kind=record.kind,
+        world_tier=record.world_tier,
+        required_route=record.required_route,
+        requirement_options=record.requirement_options,
+        module_limits=record.module_limits,
+    )
+
+
+def locations_for_manifest(manifest: CampaignManifest) -> tuple[LocationData, ...]:
+    """Project the legacy canonical campaign sequence into native slots."""
+    return tuple(
+        _location_for_record(record, record.index, record.index // PAGE_SIZE)
+        for record in manifest.levels
+    )
+
+
+def locations_for_layout(
+    manifest: CampaignManifest, layout: CampaignLayout,
+) -> tuple[LocationData, ...]:
+    """Project canonical records into their layout-defined native slot order."""
+    locations = tuple(
+        _location_for_record(entry.record, entry.slot_index, entry.page_index)
+        for entry in layout_entries(manifest, layout)
+    )
+    if layout.progression_model in MACHINE_MODELS:
+        return tuple(replace(location, world_tier=0) for location in locations)
+    return locations
+
+
+def locations_for_level_set(level_set: str) -> tuple[LocationData, ...]:
+    return locations_for_manifest(campaign_for_level_set(level_set))
+
+
+LOCATIONS = locations_for_manifest(_CAMPAIGN)
+LOCATION_NAME_TO_ID = {location.name: location.code for location in LOCATIONS}
+
+MACHINE_ITEMS = (
+    "Bender Access", "Rotation Access", "Reflection Access", "Merger2 Access", "Merger3 Access", "Merger4 Access"
+)
+PERMIT_ITEMS = (
+    "Short Pack Permit", "Intermediate Pack Permit", "Advanced Pack Permit", "Challenge Board Permit", "Final Pack Permit"
+)
+LEGACY_ITEM_NAMES = MACHINE_ITEMS + ("Progressive Word Length",) + PERMIT_ITEMS + (
+    "Recipe Hint", "Factory Tip", "Sticker Parcel",
+)
+STICKER_NAMES = (
+    "I Sticker", "C Sticker", "CAT Sticker", "OWL Sticker", "DRAGON Sticker", "PITCHFORK Sticker",
+)
+NEW_ITEM_NAMES = ("Progressive World Access",) + STICKER_NAMES
+ITEM_NAMES = LEGACY_ITEM_NAMES + NEW_ITEM_NAMES + PROGRESSIVE_ITEMS
+ITEM_NAME_TO_ID = {name: BASE_ID + index for index, name in enumerate(ITEM_NAMES, start=1)}
+PROGRESSION_ITEMS = MACHINE_ITEMS[1:]
+STICKER_ITEMS = tuple(sticker for sticker in STICKER_NAMES for _ in range(5))
+ITEM_POOL = PROGRESSION_ITEMS + STICKER_ITEMS + STICKER_NAMES[:5]
+
+REGION_REQUIREMENTS = {
+    "Starter Workshop": 0,
+    "Short Word Bench": 1,
+    "Main Factory": 2,
+    "Advanced Factory": 3,
+    "Challenge Board": 4,
+    "Final Contract": 5,
+}

@@ -1,0 +1,14 @@
+{
+  "campaign_id": "word-factori-hybrid",
+  "manifest_version": "1.2.1",
+  "manifest_digest": "35d9e875e92c7ae6ffe1cb3a3a51af66bf174334197ad28ce88bcbf66ff54869",
+  "level_count": 40,
+  "layout_digest": "35d9e875e92c7ae6ffe1cb3a3a51af66bf174334197ad28ce88bcbf66ff54869",
+  "base_manifest_digest": "752740964274c599af058a8946f56d4e70f72518841ed6df2c5cf6221ea3c462",
+  "progression_model": "tutorial_six_then_four_v1",
+  "layout_algorithm": "fixed_pages_v1",
+  "page_size": 6,
+  "integration_mode": "supported",
+  "tutorial_page_unlock_count": 6,
+  "later_page_unlock_count": 4
+}

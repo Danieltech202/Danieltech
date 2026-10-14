@@ -1,0 +1,174 @@
+# Changelog
+
+## Compatibility verification — 2026-10-06 (no new player release)
+
+- Verified the existing v1.7.0 APWorld against the final official Archipelago 0.6.8 release, rather than a development snapshot. No gameplay code, native patch, YAML options, defaults, IDs or release assets changed.
+- Expanded connected test tooling to stage AP's new core package and report the actual tested AP version. Added same-client disconnect/reconnect coverage alongside client restart, duplicate checks and full item replay.
+- Added official 0.6.7 and 0.6.8 source pins to the Windows/Ubuntu connected CI matrix; updated the isolated headless dependency pin for 0.6.8.
+- Updated installation guidance to recommend AP 0.6.8 while retaining 0.6.7 support. Upgrading AP alone does not require a new Word Factori room/save or repatching the game; a new AP installation folder needs the same v1.7.0 APWorld installed there.
+- Compatibility tests use simulated game completion journals. This is not a stable-release promotion or a claim of a new live Proton/Windows playthrough.
+
+## 1.7.0 — Progress, recovery and generation fixes (tester prerelease)
+
+- Fixed Universal Tracker reconstruction from tuple-based saved room data, including selected Type-a-Word targets. Contract, digest and malformed-data validation remain enforced.
+- Fixed the nine exported APTests progressive-generation failures by preserving early campaign capacity during reverse item placement. Machine tiers, four-of-six page gates, IDs and YAML defaults are unchanged.
+- Reduced repeated normal-machine page-rule evaluation: unavailable machinery is rejected first, and page checks stop once four predecessors are reachable. This improves generation/Tracker evaluation, not in-game rendering performance.
+- Fixed remaining repeated page traversal exposed by mixed-world stress testing. Normal campaigns reuse predecessor results only inside one synchronous reachability evaluation, preserving real location/region rules and clearing results between queries and on exceptions. Added repeatable mixed-world accessibility checks and exhaustive normal-machine inventory comparisons.
+- Invalid Type-a-Word configurations now use Archipelago's option-error classification. Added a valid 20-target APTests meta YAML so randomized word options receive meaningful coverage rather than an empty list.
+- Added packaged real-AP regression replay, saved-room/Tracker sphere comparisons, required-accessibility validation and a deliberately broken-world rejection test. The corrected candidate passed the full browser retest: 205 unit tests and 14,500 generations across all 11 categories, with zero raw timeouts/restarts. Both 74-case local Tracker and mixed-world matrices also passed. See [APTests findings and retest instructions](https://github.com/Akamarus/word-factori-archipelago/blob/v1.7.0/docs/testing/aptests-regressions-20260929.md). These automated results do not replace live-game acceptance.
+- Added read-only Progress and Status tabs to Windows and native Linux/Proton AP Mail. Campaign rows follow the room's shuffled page order, keep canonical check names and distinguish local page access, server completion and missing machine routes.
+- Added normal and progressive requirement details to Type-a-Word cards, including alternative routes, finite quantities and restricted campaign labs. I sources remain available; no rules, IDs, machine allowances or YAML defaults changed.
+- Cached room/save-bound observations; stale, disconnected and unavailable states are explicit. Cosmetic failures cannot interrupt authoritative checks or item reconciliation.
+- Added safe recovery guidance for connection, patch, room/save, journal and Mail failures without displaying personal paths or exception text.
+- Bumped Windows presentation protocol to 4 and native Mail protocol to 2. Both retain bounded messages, input isolation and regular-client fallback. Tabs wrap on narrow panels; progress text scrolls.
+- Added required Windows/Ubuntu connected CI pinned to official AP 0.6.7, two 263-check/two-goal seeds, duplicate/reconnect/tracker tests and deliberate premature-victory rejection. These simulate the game boundary, not real gameplay.
+- Updated quick-start/troubleshooting and normal/progressive YAML examples. The progressive example enables recipes and three selected word orders; option defaults are unchanged.
+- Rebuild and reinstall the matching native delta and APWorld together with the game/client closed. Upgrade/restore keeps saves and the verified original backup. This update does not introduce per-item reloads.
+- Stable release remains gated on real Windows/Linux installation and playthroughs, password/reconnect behavior, supported display modes and 60-minute performance measurements. Exclusive fullscreen remains unsupported.
+
+## 1.6.0 — AP Mail and tester feedback follow-up (tester prerelease)
+
+- Added experimental native **Linux/Proton AP Mail**: Items with received/sent filters and paged history, Chat, Type-a-Word targets, Status, and blue item popups on the left. Open with AP MAIL or F8. Initial server/slot/password entry remains in the regular native client; reconnect uses its existing configuration. Windows retains its existing overlay. No extra service, dependency or YAML option is required.
+- Native Mail uses a separate bounded presentation channel, a single paired client, observed heartbeats, room/session checks, one pending action and duplicate suppression. Stale/disconnected delivery disables actions; Mail cannot grant items, complete checks or edit game saves. Chat accepts plain messages and `/help`, `/wf_status`, `/wf_words`; other commands stay in the regular client.
+- Native input guards isolate clicks, held keys, text and scrolling while Mail owns input. Dismissal consumes its click; focus/room changes clear drafts. Factory production and progression polling continue while Mail is open. Text uses the installed font, with readable key/door labels and `?` fallback for unsupported glyphs.
+- Linux setup transactionally installs and verifies the Mail capability marker and receipt. Uninstall removes that owned marker while preserving unowned history. Both platforms ship the same exact-build delta; it does not distribute a game binary, font or player save.
+
+- Added an **AP Mail → Type-a-Word** tab on Windows, using the existing panel style. It lists only the connected room's selected targets, with Not completed, Sending and Completed states. Disconnects and disabled orders have explicit messages; changing rooms cannot retain the previous room's targets. Key/door symbols have readable labels when the game font lacks those glyphs.
+- Selected targets are also announced in the regular client on connection and written to the generated spoiler, grouped by player. `/wf_words` remains available for status and missing-machine details on both platforms. No YAML or location-ID changes are required.
+- Fixed a reproduced source-install generation rejection: the APWorld's maximum-version metadata stopped at 0.6.7, so current 0.6.8 source refused to initialize it. Raised the ceiling to 0.6.8 after generation tests from unrelated working directories, including a two-player normal/progressive room. This is generation compatibility evidence, not a full 0.6.8 client or Proton playthrough.
+- Reduced progressive native simulation overhead by auditing the scene and simulation graph once before each tick, then reusing bounded machine permissions only inside that synchronous tick. Normal returns, early returns and exceptions clear those permissions. Placement/preview checks outside the tick and completion checks still validate independently; received upgrades are polled as before.
+- Rebuilt and round-tripped the native delta. Windows and Linux installers recognize 1.5.1 as an upgrade/restore source and retain the verified original-game backup. Applying the native performance change will require rerunning the matching installer; replacing the APWorld alone is insufficient.
+- Added regressions for reported S/B/H recipe inventories and Universal Tracker reconstruction. Isolated native factories successfully produced S through 5, B through 3+I and H through 4+I within the stated budgets; J2→S was already out of logic at the reported inventory. No unsupported logic weakening or new symbol-recipe locations were introduced. See [investigation evidence](docs/feedback-2026-09-16.md).
+- Native Mail JSON interoperability and one-message/one-acknowledgment round trips are tested against the real Windows game runner and Python adapter in an isolated namespace, without an AP server. This does not replace a connected multiplayer or Linux/Proton playthrough. Sustained large-factory performance and actual Proton/X11/Wayland/Flatpak Mail acceptance remain pending. A memory leak has not been demonstrated.
+- Recipe filler percentage, a default-max-speed option, real sticker awards, symbol-recipe checks and broader naming/log polish remain separate follow-ups. No YAML defaults, location IDs, recipe requirements or room layout contracts change in 1.6.0.
+- Upgrade with the complete 1.6.0 player ZIP: close Word Factori/Archipelago, rerun its Windows or Linux installer, restart Archipelago and update the tracker-side APWorld. Replacing only the APWorld is insufficient. Use a new room and fresh empty mod save for candidate testing; preserve old saves and the original backup. This remains a tester prerelease, not a stable-release claim.
+
+## 1.5.1 — Recipe loading, static groups and symbol orders (tester prerelease)
+
+- Fixed a native recipe-normalization bug reproduced with the original game code: duplicate reversed inputs could stop processing a machine's remaining recipes. Subsequent save loading could then crash with `Unable to find instance for object index 6`. Normalization now skips the already-normalized entry and continues processing.
+- AP sessions load the verified bundled recipe table and ignore online recipe replacements. Entering the AP mod resets an earlier vanilla online table; vanilla sessions retain online updates. This keeps game recipes aligned with AP logic.
+- Registered class-level item groups: `Machines`, `Progressive Machines`, `Stickers`; location groups: `Campaign Levels`, `Recipe Discoveries`, `Word Orders`. Groups exist before Archipelago registers the world and do not change with a seed's options.
+- Type-a-Word now supports A–Z plus every verified native special character: `()#%$@+=&0123456789🔑🚪~`. Lowercase ASCII input still becomes uppercase. Targets remain 2–12 characters, with at most 200 entries and 1–20 selected orders. Quote YAML targets, especially numbers and punctuation.
+- Rebuilt normal and progressive reachability catalogs from native-verified transitions and factory witnesses, including the game's rotated-six representation of 9. Added symbol completion, duplicate-check and Universal Tracker reconstruction coverage. The 187 optional letter-recipe checks and stable numbered word-order IDs are unchanged.
+- Rebuilt the reversible native delta and updated Windows/Linux validation. Upgrade/restore paths retain recognition of 1.5.0 and earlier supported patches and preserve the verified original backup.
+- Updated player documentation and the word-order YAML example. Use matching APWorld, client, tracker and native patch, a new room and a fresh mod save; older symbol/quantity contracts are not silently reinterpreted. Keep existing saves as backups.
+- This is a tester prerelease, not a stable-release declaration. Automated and isolated native tests do not replace a connected Windows or Linux/Proton playthrough. The fix does not edit or repair player saves.
+
+## 1.5.0 — Expanded checks and progressive machines (tester prerelease)
+
+All changes below are new since the published 1.4.2 release. This release is for community testing, not a declaration of stable or fully playtested support.
+
+### Upgrade instructions — please read
+
+- Download **word-factori-archipelago-1.5.0.zip**, not GitHub's source-code archives. One ZIP supports Windows and native Linux/Proton setup.
+- Close Word Factori and Archipelago. Extract into a separate folder and rerun the included installer: **Install Word Factori Archipelago.cmd** on Windows, or `bash "Install Word Factori Archipelago.sh"` on Linux.
+- Restart Archipelago so it loads the new APWorld/client. Update the Word Factori APWorld used by Universal Tracker as well.
+- Generate a **new 1.5.0 room** and use a **fresh empty mod save**. Do not reuse a progressed save or assume older rooms/development builds are compatible. YAML changes cannot retrofit an existing room.
+- Keep old saves and `data.wf-ap-original.win`. Supported previous native patches upgrade through the verified original backup. Unknown builds and missing/corrupt required backups are rejected.
+- Archipelago **0.6.7** and the installer-verified Word Factori Steam build **12616577** are required.
+
+### Added: configurable Recipe Journal checks
+
+- New `recipe_checks` YAML option, **enabled by default**. Set it to `false` for the smaller factory-only campaign (plus any enabled word orders).
+- Adds **187 working A–Z-producing recipe checks**, including **119 hidden alternatives**. Different machine/input routes to the same output are distinct locations.
+- These are actual global Recipe Journal discoveries, separate from named Discovery Lab level completions.
+- Excludes source I, symbol outputs, and two native Merger3 entries with only two inputs that a real factory cannot use.
+- Recipe identities normalize native inputs, have stable IDs and a validated catalog digest, and are bound to the connected room's save.
+- Recipe scans are idempotent across duplicate scans and reconnects. They wait for native saved journal state; the game's save-flush cadence can delay reporting.
+- Recipe checks add filler, not mandatory machinery, and do not unlock pages or count toward either victory goal.
+
+### Added: optional Type-a-Word orders
+
+- New `type_a_word_checks` option, **off by default**.
+- `type_a_word_words` supplies your own YAML word list; `type_a_word_count` selects a deterministic seed-specific subset.
+- Defaults: count **5**, empty list. Supported count: **1–20**. Maximum list size: **200 entries**. Each entry must contain **2–12 ASCII letters**.
+- Input is trimmed, uppercased, deduplicated and sorted before seeded selection. Enabled orders require enough distinct valid words; invalid types, symbols, oversized entries/lists and insufficient lists are rejected.
+- Manufacture the selected words in the native Type-a-Word factory. The client reads validated word-completion state from the bound save; unrelated words do not send checks.
+- Added `/wf_words` for the selected targets, completion status and missing machine/upgrades.
+- Orders have deterministic identities and authoritative room data. Local YAML and tracker reconstruction cannot resample a live room's words.
+- Orders add filler checks, not new machinery requirements in the item pool. They do not advance page arrows or campaign victory.
+- Strict score parsing rejects malformed, negative and oversized completion values. Reconnects and repeated reports remain idempotent.
+
+### Added: optional progressive machine quantities
+
+- New `progressive_machines` option, **off by default**, within the same integration and installer.
+- Six families: Bender, Rotation, Reflection, Merger2, Merger3 and Merger4.
+- Each family upgrades through **1 → 2 → 3 → 4 → unlimited** simultaneously placed machines.
+- Start with **one Bender** and **unlimited I sources**. There are **29 remaining progressive upgrades** before configured starting-inventory removal. Pipes and target receivers do not consume an allowance.
+- Clockwise/counterclockwise share the Rotation allowance; horizontal/vertical share Reflection. Deleting a machine frees its slot.
+- The fifth tier removes the AP family limit, not the level's own lab or challenge restrictions.
+- Added supported `start_inventory_from_pool`: configured starting copies are removed from the random pool. Use progressive item names in progressive mode and normal access names otherwise.
+- World, client and tracker use the same validated, constructive whole-factory quantity budgets. Identical operations can share machinery; different processes are not merged merely because they output the same letter.
+- Quantity logic covers campaign targets, restricted labs/challenges, recipe checks and selected word orders. It is conservative, not a guarantee of optimal factory size; better player designs may finish checks before the tracker considers them reachable.
+- Progressive page selection requires a funded upgrade path and rejects known dead-end layouts. Page one contains shuffled I/C/V/L plus two later targets; remaining pages are shuffled. The **four-completion page unlock rule is unchanged**.
+- A progressive item ordering hook helps Archipelago fill follow the verified path while retaining randomized item locations and other players' pool positions.
+- Quantity-based page reachability is cached and evaluated as a single page chain rather than recursively rechecking the same earlier pages.
+
+### Changed: native machinery enforcement and refresh
+
+- Updated the reversible native patch and matching client/installer fingerprints.
+- Native production and recipe previews enforce received machine access, including saved factories. Native custom-building production and previews are blocked in the AP mod rather than allowing them to bypass access rules; saved layouts are retained.
+- Progressive allowances are polled **during play**, without re-entering a factory or reloading the game. Normal, non-progressive access still refreshes when returning to Levels and entering a factory.
+- Progressive accounting includes placed/disconnected machinery and shared directions, excludes placement ghosts, and also validates the simulation graph.
+- Imported/saved over-limit layouts stay editable but cannot simulate or award buffered completion checks. Removing excess machines or receiving an upgrade restores eligibility.
+- Native over-limit notices identify exceeded family/challenge limits. `/wf_status` shows progressive allowances; `/wf_words` reports whole-route missing upgrades.
+- Versioned room-bound runtime acknowledgment prevents an old/mismatched runtime from authorizing new recipe/word checks or progressive campaign checks.
+- Same-room reconnect retains validated inventory. Changed-room, stale/conflicting and malformed snapshots fail safely. Duplicate item packets do not increment progressive tiers.
+
+### Fixed: tracker, campaign and integration correctness
+
+- Universal Tracker restores the server's saved shuffled layout and goal instead of generating a different layout from tracker seed/YAML.
+- Tracker reconstruction also restores recipe enablement, selected word orders and progressive quantity settings. Invalid or partial contracts are rejected rather than silently reinterpreted.
+- Page-aware logic still distinguishes four *solvable* preceding-page levels from four *actually completed* levels in the game. Manual `/send_location` does not write game saves or open native page arrows.
+- Corrected **Discover M — Triple Merge Lab** to permit/require **Merger2 plus Merger3**. Merger3 alone was not a valid route. Its existing name, target and check ID are unchanged; the hybrid manifest is now **1.2.1**.
+- Fresh-save binding and completion parsing now cover recipe/word progress, slot changes and malformed data. Checks remain paused on campaign/save/runtime identity mismatch.
+
+### Installation, packaging and documentation
+
+- Windows and Linux installers recognize supported prior v1/v2 native patches, preserve the verified original backup, validate receipts/capabilities and refuse unknown game bytes.
+- Windows staged-mod validation and Linux manifest validation accept the updated hybrid campaign correctly.
+- APWorld includes the new recipe/word/quantity modules and derived catalogs; package verification explicitly checks the runtime payload.
+- Native production build was compiled/reopened twice with identical output, and the distributable copy/literal delta was independently round-tripped.
+- Full game binaries, proprietary recipes, fonts, music and user saves are not distributed.
+- README, AP tutorial, Linux guide and native testing guide now describe 1.5.0 behavior and installation.
+- Examples: normal Campaign Count, Final Factory, progressive-machine play, and custom Type-a-Word orders. All new options and defaults are documented.
+- Existing 1.4.2 Linux directory/shortcut and receipt fixes remain included. Linux uses the regular native AP client; the AP Mail overlay remains Windows-only.
+
+### YAML example: enable all new features
+
+Merge these settings into your player's existing `Word Factori:` section; do not create a duplicate section.
+
+```yaml
+Word Factori:
+  custom_level_set: discovery_labs
+  goal: campaign_count
+  campaign_count: 25
+  recipe_checks: true
+  type_a_word_checks: true
+  type_a_word_count: 3
+  type_a_word_words: [JACK, FACTORY, PUZZLE, ISLAND]
+  progressive_machines: true
+  # Optional extra starting copy; one Bender is already granted.
+  start_inventory_from_pool:
+    Progressive Rotation Access: 1
+```
+
+For the smaller normal-access campaign, use `recipe_checks: false`, `type_a_word_checks: false`, and `progressive_machines: false`.
+
+Total checks: **30 or 40 factories + 187 when recipes are enabled + 1–20 selected word orders when enabled**. Only the 30 canonical campaign locations count toward Campaign Count; Discovery Labs, recipes and word orders do not.
+
+### Verification and what testers should look for
+
+- Local automated suite: **643 tests, 2 skipped, no failures** before release preparation; release verification reruns the suite.
+- **88 isolated native enforcement assertions** and **44 native whole-word/goal/journal assertions** passed.
+- All **16 progressive campaign/goal/recipe/order generation combinations** passed. Both previously failing seeds, a mixed normal/progressive room and a two-progressive-player room also generated successfully from the packaged APWorld.
+- Single-player progressive generation measured about **4.5–5.5 seconds** here; the mixed-mode room took about **20 seconds**. This is evidence, not a speed guarantee or a fix for every generation-performance issue.
+- Still needed: connected game/client/Universal Tracker playthroughs, reconnect/disk restart, GUI import/undo/duplicate and restored over-limit layouts, large-factory performance, and real Linux/Proton gameplay. Repeated native scene scans may become expensive on large factories.
+- Please report the version, YAML options, target/check name, expected versus actual behavior, and relevant client messages. Redact passwords and personal paths; private setup details do not need to be posted publicly.
+- No stable-release claim: exclusive fullscreen, arbitrary Workshop import, custom-building production and the Linux overlay remain unsupported.
+
+## Earlier releases
+
+- [1.4.2 — Linux setup fixes](https://github.com/Akamarus/word-factori-archipelago/releases/tag/v1.4.2)
+- [1.4.1 — Linux tester prerelease](https://github.com/Akamarus/word-factori-archipelago/releases/tag/v1.4.1)
+- [1.4.0 — Nonlinear tester prerelease](https://github.com/Akamarus/word-factori-archipelago/releases/tag/v1.4.0)

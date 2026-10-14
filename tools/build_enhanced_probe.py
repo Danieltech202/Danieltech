@@ -1,0 +1,104 @@
+"""Build and structurally inspect a development copy; never installs it.
+
+Only the user's allowlisted original and an official UndertaleModTool CLI are
+accepted. Extracted code stays in a temporary directory outside the repository.
+No original or patched game binary belongs in a release or source control.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from tools.enhanced_hooks import ORIGINAL_SHA256, transform_sources, verify_original, CODE_ENTRIES, runtime_helpers
+from tools.enhanced_hooks import production_code_entries, transform_production_sources
+from tools.mail_hooks import production_mail_helpers
+from tools.run_mail_native_probe import validate_reopened
+
+
+def build_probe(cli: Path, original: Path, output: Path) -> dict:
+    if output.exists() or output.with_suffix(".json").exists():
+        raise ValueError("Probe output already exists; choose a fresh destination")
+    verify_original(original.read_bytes())
+    helpers = runtime_helpers(ROOT) + '\n' + production_mail_helpers(ROOT)
+    entries = production_code_entries()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="wf-enhanced-probe-") as temporary:
+        scratch = Path(temporary)
+
+        def run(*args: object) -> None:
+            result = subprocess.run([str(cli), *map(str, args)], capture_output=True, text=True)
+            if result.returncode:
+                raise RuntimeError(result.stdout + result.stderr)
+
+        dump = scratch / "original"
+        code_args = [arg for entry in entries for arg in ("-c", entry)]
+        run("dump", original, "-o", dump, *code_args)
+        sources = {entry: (dump / "CodeEntries" / (entry + ".gml")).read_text(encoding="utf-8")
+                   for entry in entries}
+        transformed = transform_production_sources(sources, ROOT)
+        imports = scratch / "imports"
+        imports.mkdir()
+        for entry, source in transformed.items():
+            (imports / (entry + ".gml")).write_text(source, encoding="utf-8")
+        script = scratch / "compile.csx"
+        script.write_text(
+            "using System.IO;\n"
+            "UndertaleModLib.Compiler.CodeImportGroup group = new(Data) { MainThreadAction = MainThreadAction };\n"
+            "foreach (var file in Directory.GetFiles(" + json.dumps(str(imports)) + ", \"*.gml\"))\n"
+            "    group.QueueReplace(Path.GetFileNameWithoutExtension(file), File.ReadAllText(file));\n"
+            "group.Import();\n", encoding="utf-8")
+        staged = scratch / "patched.win"
+        run("load", original, "-s", script, "-o", staged)
+        run("info", staged)
+        inspected = scratch / "inspected"
+        run("dump", staged, "-o", inspected, *code_args)
+        validate_reopened({entry: (inspected / 'CodeEntries' / (entry + '.gml')).read_text(encoding='utf-8')
+                           for entry in entries}, transformed)
+        required_calls = {
+            CODE_ENTRIES[0]: "wf_ap_enabled()",
+            CODE_ENTRIES[1]: "wf_ap_enabled()",
+            CODE_ENTRIES[2]: "wf_ap_counts(arg0)",
+            CODE_ENTRIES[3]: "wf_access_allowed(module, tag)",
+            CODE_ENTRIES[4]: "wf_access_allowed(arg0, arg1)",
+            CODE_ENTRIES[5]: "wf_access_factory_allowed(buildings)",
+            CODE_ENTRIES[6]: "wf_access_poll()",
+            CODE_ENTRIES[7]: "wf_access_active()",
+            CODE_ENTRIES[8]: "wf_access_active()",
+        }
+        for entry, call in required_calls.items():
+            decompiled = (inspected / "CodeEntries" / (entry + ".gml")).read_text(encoding="utf-8")
+            if call not in decompiled:
+                raise RuntimeError(f"Compiled hook is missing from {entry}")
+        patched = staged.read_bytes()
+        # Exclusive create: even a late concurrent destination must be preserved.
+        with output.open("xb") as stream:
+            stream.write(patched)
+        metadata = {
+            "status": "Production providers compiled and reopened; connected acceptance pending",
+            "protocol": "enhanced_v2",
+            "capability": "free_word_machine_enforcement_v1",
+            "mail_protocol": 2,
+            "original_sha256": ORIGINAL_SHA256,
+            "patched_sha256": hashlib.sha256(patched).hexdigest(),
+            "helper_sha256": hashlib.sha256(helpers.encode("utf-8")).hexdigest(),
+            "hooks": list(entries),
+            "installed": False,
+        }
+        output.with_suffix(".json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+        return metadata
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cli", type=Path, required=True)
+    parser.add_argument("--original", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    print(json.dumps(build_probe(args.cli.resolve(), args.original.resolve(), args.output.resolve()), indent=2))
